@@ -9,3 +9,7 @@ def teardown():
 
 def test_basic():
     print("I RAN!", end=' ')
+
+def test_get_data():
+    num = 22222
+    buoyreader.get_buoy_data(num)
