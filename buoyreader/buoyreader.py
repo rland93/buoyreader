@@ -29,15 +29,28 @@ import datetime
 # West Point Loma Buoy 46232
 
 def get_buoy_data(buoy_number, buoy_root="http://www.ndbc.noaa.gov/data/realtime2/"):
+    # create buoy url from buoy number
     buoy_url = buoy_root + "{}.txt".format(str(buoy_number))
-    with request.urlopen(buoy_url, data=None) as response:
-        raw_data = response.read().decode("ascii") # I don't anticipate any encoding errors in this data.
-    return raw_data
+    # open url as httpobject
+    try:
+        httpobject = request.urlopen(buoy_url, data=None)
+    except request.HTTPError as e:
+        print("HTTPError: " + str(e))
+    except request.URLError as e:
+        print("URLError: " + str(e))
+    else:
+        with httpobject as response:
+            raw_data = response.read().decode("ascii") # I don't anticipate any encoding errors in this data.
+        return raw_data
+
+print(get_buoy_data(22222))
+
 
 # get the most current line for real time information.
 def get_first_line(string):
     i = string.splitlines()
-    # This ensures that the headings aren't read and we only take the top row.
+    # This ensures that the headings (lines begin with #) 
+    # aren't read and we only take the top row.
     for line in i:
         if not line.startswith('#'):
             firstline = line
@@ -65,9 +78,3 @@ def separate_data(split_line):
         "Temperature": temp,}
     return wavedata
 
-'''
-line = get_first_line(raw_data)
-wavedata = separate_data(line)
-
-for i in wavedata:
-    print(f"\t{i}: {wavedata[i]}")'''

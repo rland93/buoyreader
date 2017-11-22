@@ -1,15 +1,16 @@
 from nose.tools import *
-import buoyreader
+from buoyreader import buoyreader
 
 def setup():
-    print("SETUP!")
+    print("SETUP")
 
 def teardown():
-    print("TEAR DOWN!")
+    print("TEAR DOWN")
 
 def test_basic():
     print("I RAN!", end=' ')
 
-def test_get_data():
-    num = 22222
-    buoyreader.get_buoy_data(num)
+def test_bad_buoy_number():
+    # bad buoy number 22222
+    buoy_number = 99999
+    assert buoyreader.get_buoy_data(buoy_number) = Exception
