@@ -35,16 +35,16 @@ def get_buoy_data(buoy_number, buoy_root="http://www.ndbc.noaa.gov/data/realtime
     try:
         httpobject = request.urlopen(buoy_url, data=None)
     except request.HTTPError as e:
-        print("HTTPError: " + str(e))
+        return ("HTTPerror", str(e))
+        print(str(e))
     except request.URLError as e:
-        print("URLError: " + str(e))
+        return ("URLerror", str(e))
+        print(str(e))
     else:
         with httpobject as response:
-            raw_data = response.read().decode("ascii") # I don't anticipate any encoding errors in this data.
+            raw_data = response.read().decode("ascii") 
+        # return data as str
         return raw_data
-
-print(get_buoy_data(22222))
-
 
 # get the most current line for real time information.
 def get_first_line(string):
@@ -57,24 +57,58 @@ def get_first_line(string):
             break
     return firstline.split()
 
-def separate_data(split_line):
-    today = datetime.datetime.today()
-    t = datetime.datetime(int(split_line[0]),       # years (yyyy)
-                          int(split_line[1]),       # months (mm)
-                          int(split_line[2]),       # days (dd)
-                          int(split_line[3]) -8,    # hh (subtract 8 GMT -> Pacific Time)
-                          int(split_line[4]))       # minutes (mm)
-    waveheight = round(float(split_line[8]) * 3.28084,ndigits=1)    # meters (m->ft)
-    waveperiod = split_line[9]                                      # period (s)
-    wavedir = split_line[11]                                        # direction (deg)
-    temp = round(float(split_line[14]) * (9/5) + 32,ndigits=1)      # water temp (fahrenheight)
+def lyear(line):
+    return int(line[0])
 
-    wavedata = {
-        "Current Time": today,
-        "Old Data?": today - t,
-        "Wave Height": waveheight,
-        "Wave Period": waveperiod,
-        "Wave Direction": wavedir,
-        "Temperature": temp,}
-    return wavedata
+def lmonth(line):
+    return int(line[1])
 
+def lday(line):
+    return int(line[2])
+
+def lhour(line):
+    return int(line[3]) + 16
+
+def lminute(line):
+    return int(line[4])
+
+def lheight(line):
+    return float(line[8])
+
+def lperiod(line):
+    return int(line[9])
+
+def ldir(line):
+    return int(line[11])
+
+def ltemp(line):
+    return float(line[14])
+
+def ldatetime(line):
+    return datetime.datetime(lyear(line),
+                          lmonth(line),
+                          lday(line),
+                          lhour(line),
+                          lminute(line))
+
+def ltimedelta(line):
+    current_time = datetime.datetime.today()
+    return current_time - ldatetime(line)
+
+def meters_to_feet(m):
+    ft = round(m * 3.28084,ndigits=1)
+    return ft
+
+def celcius_to_freedom_units(degc):
+    degf = round(degc * (9/5) + 32, ndigits=1)
+    return degf
+
+
+current = get_first_line(get_buoy_data(46232))
+month = lmonth(current)
+day = lday(current)
+hour = lhour(current)
+minute = lminute(current)
+
+
+print("Data for {}-{} at {}:{}".format(month,day,hour,minute))
