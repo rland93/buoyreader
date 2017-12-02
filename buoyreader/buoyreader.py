@@ -57,21 +57,6 @@ def get_first_line(string):
             break
     return firstline.split()
 
-def lyear(line):
-    return int(line[0])
-
-def lmonth(line):
-    return int(line[1])
-
-def lday(line):
-    return int(line[2])
-
-def lhour(line):
-    return int(line[3]) + 16
-
-def lminute(line):
-    return int(line[4])
-
 def lheight(line):
     return float(line[8])
 
@@ -85,30 +70,22 @@ def ltemp(line):
     return float(line[14])
 
 def ldatetime(line):
-    return datetime.datetime(lyear(line),
-                          lmonth(line),
-                          lday(line),
-                          lhour(line),
-                          lminute(line))
+    return datetime.datetime(
+                            int(line[0]),
+                            int(line[1]),
+                            int(line[2]),
+                            int(line[3]),
+                            int(line[4]))
+
 
 def ltimedelta(line):
     current_time = datetime.datetime.today()
     return current_time - ldatetime(line)
 
-def meters_to_feet(m):
-    ft = round(m * 3.28084,ndigits=1)
+def ft(meters):
+    ft = round(meters * 3.28084, ndigits=1)
     return ft
 
-def celcius_to_freedom_units(degc):
+def celcius_to_fah(degc):
     degf = round(degc * (9/5) + 32, ndigits=1)
     return degf
-
-
-current = get_first_line(get_buoy_data(46232))
-month = lmonth(current)
-day = lday(current)
-hour = lhour(current)
-minute = lminute(current)
-
-
-print("Data for {}-{} at {}:{}".format(month,day,hour,minute))

@@ -8,11 +8,7 @@ app = Flask(__name__)
 def testing():
     buoy_number = 46232
     line = buoyreader.get_first_line(buoyreader.get_buoy_data(buoy_number))
-
-    month =     buoyreader.lmonth(line)
-    day =       buoyreader.lday(line)
-    hour =      buoyreader.lhour(line)
-    minute =    buoyreader.lminute(line)
+    buoy_date = buoyreader.ldatetime(line)
     height =    buoyreader.lheight(line)
     height_ft = buoyreader.meters_to_feet(buoyreader.lheight(line))
     period =    buoyreader.lperiod(line)
@@ -23,10 +19,7 @@ def testing():
     return render_template("index.html",
                             line = line,
                             buoy_number = buoy_number,
-                            month = month,
-                            day = day,
-                            hour = hour,
-                            minute = minute,
+                            buoy_date = buoy_date,
                             height = height,
                             height_ft = height_ft,
                             period = period,
