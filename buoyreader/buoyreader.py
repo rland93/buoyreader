@@ -1,91 +1,71 @@
-# http://www.ndbc.noaa.gov/data/realtime2/46232.txt
-#
-#               what it should look like:
-#
-#  YY   MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE
-#  yr   mo dy hr mn degT m/s  m/s     m   sec   sec degT   hPa  degC  degC  degC  nmi  hPa    ft
-#  2017 11 16 00 41  MM   MM   MM   1.2    13   7.4 225     MM    MM  17.5    MM   MM   MM    MM
-#    0   1  2  3  4   5    6    7     8     9    10  11     12    13    14    15   16   17    18
-
-
-# WDIR 	Wind direction (the direction the wind is coming from in degrees clockwise from true N) during the same period used for WSPD. See Wind Averaging Methods
-# WSPD 	Wind speed (m/s) averaged over an eight-minute period for buoys and a two-minute period for land stations. Reported Hourly. See Wind Averaging Methods.
-# GST 	Peak 5 or 8 second gust speed (m/s) measured during the eight-minute or two-minute period. The 5 or 8 second period can be determined by payload, See the Sensor Reporting, Sampling, and Accuracy section.
-# WVHT 	Significant wave height (meters) is calculated as the average of the highest one-third of all of the wave heights during the 20-minute sampling period. See the Wave Measurements section.
-# DPD 	Dominant wave period (seconds) is the period with the maximum wave energy. See the Wave Measurements section.
-# APD 	Average wave period (seconds) of all waves during the 20-minute period. See the Wave Measurements section.
-# MWD 	The direction from which the waves at the dominant period (DPD) are coming. The units are degrees from true North, increasing clockwise, with North as 0 (zero) degrees and East as 90 degrees. See the Wave Measurements section.
-# PRES 	Sea level pressure (hPa). For C-MAN sites and Great Lakes buoys, the recorded pressure is reduced to sea level using the method described in NWS Technical Procedures Bulletin 291 (11/14/80). ( labeled BAR in Historical files)
-# ATMP 	Air temperature (Celsius). For sensor heights on buoys, see Hull Descriptions. For sensor heights at C-MAN stations, see C-MAN Sensor Locations
-# WTMP 	Sea surface temperature (Celsius). For buoys the depth is referenced to the hull's waterline. For fixed platforms it varies with tide, but is referenced to, or near Mean Lower Low Water (MLLW).
-# DEWP 	Dewpoint temperature taken at the same height as the air temperature measurement.
-# VIS 	Station visibility (nautical miles). Note that buoy stations are limited to reports from 0 to 1.6 nmi.
-# PTDY 	Pressure Tendency is the direction (plus or minus) and the amount of pressure change (hPa)for a three hour period ending at the time of observation. (not in Historical files)
-# TIDE 	The water level in feet above or below Mean Lower Low Water (MLLW). 
-
 from urllib import request
 import datetime
+import numpy as np
 
 # West Point Loma Buoy 46232
 
 def get_buoy_data(buoy_number, buoy_root="http://www.ndbc.noaa.gov/data/realtime2/"):
-    # create buoy url from buoy number
+    """NOAA Buoy Number and URL -> Data in ascii
+    Keyword Arguments:
+    buoy_number -- the NOAA buoy number
+    buoy_root -- base url for NOAA buoys. Defaults to http://www.ndbc.noaa.gov/data/realtime2/
+    """
     buoy_url = buoy_root + "{}.txt".format(str(buoy_number))
-    # open url as httpobject
+    bdata = request.urlopen(buoy_url, data=None)
+    # urlobject -> str
+    with bdata as response:
+        raw_data = response.read().decode("ascii") 
+    
+    # raw data -> 2d array
+    data = []
+    for line in raw_data.splitlines():
+        if not line.startswith("#"):
+            data.append(line_format(line.split()))    
+    return data
+            
+def swell_quality(waveheight,waveperiod):
+    """Wave height and Wave Period -> Swell Quality (Float 0-10)
+    
+    Arguments:
+    Wave Height - Wave height in meters.
+    Wave Period - Wave period in seconds.
+    """
+    b = waveperiod  # b is the dominant wave period
+    x = waveheight  # x is surf height in meters.
+    quality_good = 8.5 * (23/20)**x + (2/5) * b - 3 - 8.5
+    quality_bad = (b - 8) * x
+    quality =  max(0, min(quality_good, quality_bad))
+    return quality
+
+def line_format(split_line):
+    """Prune unimportant info from a line and return the pruned list."""
+    date_time = ldatetime(split_line)
     try:
-        httpobject = request.urlopen(buoy_url, data=None)
-    except request.HTTPError as e:
-        return ("HTTPerror", str(e))
-        print(str(e))
-    except request.URLError as e:
-        return ("URLerror", str(e))
-        print(str(e))
-    else:
-        with httpobject as response:
-            raw_data = response.read().decode("ascii") 
-        # return data as str
-        return raw_data
+        dominant_wave_height = float(split_line[8])
+    except:
+        dominant_wave_height = np.nan
+    try:
+        dominant_period = int(split_line[9])
+    except:
+        dominant_period = np.nan
+    try:
+        dominant_direction = int(split_line[11])
+    except:
+        dominant_direction = np.nan
+    try:
+        temperature = float(split_line[14])
+    except:
+        temperature = np.nan
 
-# get the most current line for real time information.
-def get_first_line(string):
-    i = string.splitlines()
-    # This ensures that the headings (lines begin with #) 
-    # aren't read and we only take the top row.
-    for line in i:
-        if not line.startswith('#'):
-            firstline = line
-            break
-    return firstline.split()
+    quality = swell_quality(dominant_wave_height, dominant_period)
 
-def lheight(line):
-    return float(line[8])
-
-def lperiod(line):
-    return int(line[9])
-
-def ldir(line):
-    return int(line[11])
-
-def ltemp(line):
-    return float(line[14])
+    return [date_time, dominant_wave_height, dominant_period, dominant_direction, temperature, quality]
 
 def ldatetime(line):
+    """split line from raw data -> datetime object"""
     return datetime.datetime(
                             int(line[0]),
                             int(line[1]),
                             int(line[2]),
                             int(line[3]),
                             int(line[4]))
-
-
-def ltimedelta(line):
-    current_time = datetime.datetime.today()
-    return current_time - ldatetime(line)
-
-def ft(meters):
-    ft = round(meters * 3.28084, ndigits=1)
-    return ft
-
-def celcius_to_fah(degc):
-    degf = round(degc * (9/5) + 32, ndigits=1)
-    return degf

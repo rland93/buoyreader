@@ -10,3 +10,13 @@ Planned features:
 * Quick stats 'dashboard' (water temp, largest swell, etc.).
 * Cool data viz stuff.
 * Nice fonts and design throughout.
+
+## Sample Buoy Data:
+    
+for example: http://www.ndbc.noaa.gov/data/realtime2/46232.txt
+
+what it should look like (with one line of data):
+
+        YY   MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE
+        yr   mo dy hr mn degT m/s  m/s     m   sec   sec degT   hPa  degC  degC  degC  nmi  hPa    ft
+        2017 11 16 00 41  MM   MM   MM   1.2    13   7.4 225     MM    MM  17.5    MM   MM   MM    MM
