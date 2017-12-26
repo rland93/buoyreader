@@ -18,11 +18,17 @@ def get_buoy_data(buoy_number, buoy_root="http://www.ndbc.noaa.gov/data/realtime
     return raw_data
 
 def read_historical_data(textfile):
+    """read a textfile instead of live data.
+    
+    Whole lot of those can be found here:
+    http://www.ndbc.noaa.gov/historical_data.shtml
+    """
     with open(textfile, mode = "r") as file:
         raw_data = file.read()
     return raw_data
     
 def raw_data_to_array(raw_data):
+    """string from the url of a buoy or a textfile -> 2d array."""
     # raw data -> 2d array
     data = []
     for line in raw_data.splitlines():
@@ -34,8 +40,8 @@ def swell_quality(waveheight,waveperiod):
     """Wave height and Wave Period -> Swell Quality 0-10
     
     Arguments:
-    Wave Height - Wave height in meters.
-    Wave Period - Wave period in seconds.
+    * waveheight - Wave height in meters.
+    * waveperiod - Wave period in seconds.
     """
     b = waveperiod  # b is the dominant wave period
     x = waveheight  # x is surf height in meters.
@@ -46,13 +52,14 @@ def swell_quality(waveheight,waveperiod):
 
 def bin_period_data(period, longperiod=14, shortperiod=9):
     """Period (float) -> Descriptive Magnitude (str).
+    
     ie, a long period swell, a mid period swell, and
     a short period swell.
 
     Arguments:
-    period - swell period. Must be float.
-    long - swells over this value will be long period.
-    short - swells under this value will be short period.
+    * period - swell period. Must be float.
+    * long - swells over this value will be long period.
+    * short - swells under this value will be short period.
     Swells between long and short will be mid period.
     """
     if period > longperiod:
@@ -62,7 +69,6 @@ def bin_period_data(period, longperiod=14, shortperiod=9):
     elif shortperiod >= period:
         period_bin = "Short (<{}s)".format(shortperiod)
     return period_bin
-
 
 def line_format(split_line):
     """Prune unimportant info from a line and return the pruned list."""
@@ -83,13 +89,8 @@ def line_format(split_line):
         temperature = float(split_line[14])
     except:
         temperature = np.nan
-        
     period_bin = bin_period_data(float(split_line[9]))
-   
-
-
     quality = swell_quality(dominant_wave_height, dominant_period)
-
     return [date_time, dominant_wave_height, dominant_period, dominant_direction, temperature, quality, period_bin]
 
 def ldatetime(line):
