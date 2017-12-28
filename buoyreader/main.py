@@ -40,8 +40,8 @@ def swell_quality(waveheight,waveperiod):
     """Wave height and Wave Period -> Swell Quality 0-10
     
     Arguments:
-    * waveheight - Wave height in meters.
-    * waveperiod - Wave period in seconds.
+    * ``waveheight``: Wave height (float or int) in meters.
+    * ``waveperiod``: Wave period (float or int) in seconds.
     """
     b = waveperiod  # b is the dominant wave period
     x = waveheight  # x is surf height in meters.
@@ -57,9 +57,9 @@ def bin_period_data(period, longperiod=14, shortperiod=9):
     a short period swell.
 
     Arguments:
-    * period - swell period. Must be float.
-    * long - swells over this value will be long period.
-    * short - swells under this value will be short period.
+    * ``period``: swell period. Must be float.
+    * ``long``: swells over this value will be long period.
+    * ``short``: swells under this value will be short period.
     Swells between long and short will be mid period.
     """
     if period > longperiod:
@@ -70,9 +70,37 @@ def bin_period_data(period, longperiod=14, shortperiod=9):
         period_bin = "Short (<{}s)".format(shortperiod)
     return period_bin
 
+def delineate_seasons(date_with_months):
+    """Datetime Object -> Season (str)
+    
+    ``date_with_months``: python datetime object with years and months
+    """
+    if date_with_months.month in (12, 1, 2):
+        return "Winter"
+    elif date_with_months.month in (3, 4, 5):
+        return "Spring"
+    elif date_with_months.month in (6, 7, 8):
+        return "Summer"
+    elif date_with_months.month in (9, 10, 11):
+        return "Fall"
+
+def delineate_equinox(date_ymd):
+    """Datetime object -> Season (split 2 ways) (str). 
+    
+    Arguments:
+    * ``date_ymd``: python datetime object with years, months, and days
+    """
+    # shitty workaround... idk how to compare dates naive of the year
+    if datetime.date(2000,3,20) > date_ymd.date().replace(year=2000) >= datetime.date(2000,9,23):
+        return "Summer"
+    else:
+        return "Winter"
+
 def line_format(split_line):
-    """Prune unimportant info from a line and return the pruned list."""
+    """Prune unimportant info from a line and return dict with pruned values."""
     date_time = ldatetime(split_line)
+    season = delineate_seasons(date_time)
+    season_hemi = delineate_equinox(date_time)
     try:
         dominant_wave_height = float(split_line[8])
     except:
@@ -86,15 +114,28 @@ def line_format(split_line):
     except:
         dominant_direction = np.nan
     try:
-        temperature = float(split_line[14])
+        temp = float(split_line[14])
     except:
-        temperature = np.nan
+        temp = np.nan
     period_bin = bin_period_data(float(split_line[9]))
     quality = swell_quality(dominant_wave_height, dominant_period)
-    return [date_time, dominant_wave_height, dominant_period, dominant_direction, temperature, quality, period_bin]
+    return {
+        "datetime": date_time,
+        "ht": dominant_wave_height,
+        "period": dominant_period,
+        "direction": dominant_direction,
+        "temp": temp,
+        "quality": quality,
+        "period_bin": period_bin,
+        "season": season,
+        "season hemi": season_hemi}
 
 def ldatetime(line):
-    """split line from raw data -> datetime object"""
+    """split line from raw data -> datetime object
+    
+    Aguments:
+    * ``line``: Single line ['yyyy','mm','dd','hh','mm']
+    """
     return datetime.datetime(
                             int(line[0]),
                             int(line[1]),
