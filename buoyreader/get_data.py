@@ -131,7 +131,5 @@ def format_data(buoy_data):
     
     # append swell quality col to dataframe
     heading.append("WVQL (0-10)")
-    
-
     return pd.DataFrame(data, columns=[i for i in heading], index=datetimes)
     
