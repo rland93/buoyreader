@@ -30,15 +30,6 @@ def read_historical_data(textfile):
     with open(textfile, "r") as file:
         raw_data = file.read()
     return raw_data
-    
-def raw_data_to_array(raw_data):
-    """string from the url of a buoy or a textfile -> 2d array."""
-    # raw data -> 2d array
-    data = []
-    for line in raw_data.splitlines():
-        if not line.startswith("#"):
-            data.append(line_format(line.split()))
-    return data
             
 def swell_quality(waveheight,waveperiod):
     """Wave height and Wave Period -> Swell Quality 0-10
@@ -47,11 +38,11 @@ def swell_quality(waveheight,waveperiod):
     * ``waveheight``: Wave height (float or int) in meters.
     * ``waveperiod``: Wave period (float or int) in seconds.
     """
-    b = waveperiod  # b is the dominant wave period
-    x = waveheight  # x is surf height in meters.
-    quality_good = 8.5 * (23/20)**x + (2/5) * b - 3 - 8.5
-    quality_bad = (b - 8) * x
-    quality =  max(0, min(quality_good, quality_bad))
+    p = waveperiod  # b is the dominant wave period
+    h = waveheight  # x is surf height in meters.
+
+    quality = min(10, (2/7)*h*(47/40)**((8/9)*(p+3)))
+
     return quality
 
 def bin_period_data(period, longperiod=14, shortperiod=9):
@@ -73,67 +64,6 @@ def bin_period_data(period, longperiod=14, shortperiod=9):
     elif shortperiod >= period:
         period_bin = "Short (<{}s)".format(shortperiod)
     return period_bin
-
-def delineate_seasons(date_with_months):
-    """Datetime Object -> Season (str)
-    
-    ``date_with_months``: python datetime object with years and months
-    """
-    if date_with_months.month in (12, 1, 2):
-        return "Winter"
-    elif date_with_months.month in (3, 4, 5):
-        return "Spring"
-    elif date_with_months.month in (6, 7, 8):
-        return "Summer"
-    elif date_with_months.month in (9, 10, 11):
-        return "Fall"
-
-def delineate_equinox(date_ymd):
-    """Datetime object -> Season (split 2 ways) (str). 
-    
-    Arguments:
-    * ``date_ymd``: python datetime object with years, months, and days
-    """
-    # shitty workaround... idk how to compare dates naive of the year
-    if datetime.date(2000,3,20) > date_ymd.date().replace(year=2000) >= datetime.date(2000,9,23):
-        equinox = "Summer"
-    else:
-        equinox = "Winter"
-    return equinox
-
-def line_format(split_line):
-    """Prune unimportant info from a line and return dict with pruned values."""
-    date_time = ldatetime(split_line)
-    season = delineate_seasons(date_time)
-    season_hemi = delineate_equinox(date_time)
-    try:
-        dominant_wave_height = float(split_line[8])
-    except:
-        dominant_wave_height = np.nan
-    try:
-        dominant_period = float(split_line[9])
-    except:
-        dominant_period = np.nan
-    try:
-        dominant_direction = int(split_line[11])
-    except:
-        dominant_direction = np.nan
-    try:
-        temp = float(split_line[14])
-    except:
-        temp = np.nan
-    period_bin = bin_period_data(float(split_line[9]))
-    quality = swell_quality(dominant_wave_height, dominant_period)
-    return {
-        "datetime": date_time,
-        "ht": dominant_wave_height,
-        "period": dominant_period,
-        "direction": dominant_direction,
-        "temp": temp,
-        "quality": quality,
-        "period_bin": period_bin,
-        "season": season,
-        "season hemi": season_hemi}
 
 def ldatetime(line):
     """split line from raw data -> datetime object
@@ -179,20 +109,29 @@ def format_data(buoy_data):
     # datetimes will become the index of our dataframe.
     datetimes = []
     # cases of "missing data" we want to replace
-    missing_data_to_replace = frozenset(["999", "99.0", "9999.0", "999.0", "999.0", "99.00"])
+    missing_data_to_replace = frozenset(["999", "99.0", "9999.0", "999.0", "99.00"])
     for i, line in enumerate(buoy_data):
         if i > 2:
             # build lines
             split_line = line.split()
             # some of the NOAA data has "99" or "99.0" or "999.0"
             # in cases where data is missing; we don't want numerical
-            # values so we replace it.
+            # values so we replace those.
             split_line = [np.NaN if x in missing_data_to_replace else x for x in split_line]
             # for n, item in enumerate(split_line):
             #     if item in missing_data_to_replace:
             #         split_line[n] = np.NaN
+
+            # append swell quality to dataframe
+            split_line.append(swell_quality(float(split_line[8]), float(split_line[9])))
+
             data.append(split_line)
             # build index
             datetimes.append(ldatetime(split_line))
+    
+    # append swell quality col to dataframe
+    heading.append("WVQL (0-10)")
+    
+
     return pd.DataFrame(data, columns=[i for i in heading], index=datetimes)
     
