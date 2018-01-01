@@ -1,4 +1,4 @@
-import buoyreader.main as br
+import buoyreader.get_data as br
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
