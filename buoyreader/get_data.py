@@ -41,6 +41,7 @@ def swell_quality(waveheight,waveperiod):
     p = waveperiod  # b is the dominant wave period
     h = waveheight  # x is surf height in meters.
 
+    # Simple method of determining wave quality.
     quality = min(10, (2/7)*h*(47/40)**((8/9)*(p+3)))
 
     return quality
